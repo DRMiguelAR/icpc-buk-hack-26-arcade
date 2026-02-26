@@ -86,7 +86,7 @@ Conoce qué aspectos como la sensación arcade, rejugabilidad, entretención, cl
 
 ## ⏰ Deadline y Envío
 
-**Deadline:** 25 de febrero de 2026 a las 23:59 (hora Chile)
+**Deadline:** 28 de febrero de 2026 a las 23:59 (hora Chile)
 
 ### Cómo Enviar
 

@@ -86,7 +86,7 @@ Learn what aspects such as arcade feel, replayability, entertainment, visual cla
 
 ## ⏰ Deadline and Submission
 
-**Deadline:** February 25, 2026 at 11:59 PM (Chile time)
+**Deadline:** February 28, 2026 at 11:59 PM (Chile time)
 
 ### How to Submit
 
