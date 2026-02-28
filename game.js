@@ -253,6 +253,9 @@ function onStep() {
       m.targetCY = zCY(1); f.targetCY = zCY(1);
       m.bounce = -32; f.bounce = -32;
       playTone(180, 0.09, 'sine');
+      score += 10; celebTimer = 1200;
+      spawnFloatText(sledX, sledCY - 62, '+10', '#ffee00');
+      playJingle();
     } else {
       // Goodies in all 3 zones, random non-repeating slots
       m.bounce = -12; f.bounce = -12;
@@ -275,6 +278,9 @@ function onStep() {
     f.targetCY = zCY(f.zone);
     m.bounce = -32; f.bounce = -32;
     playTone(180, 0.09, 'sine');
+    score += 10; celebTimer = 1200;
+    spawnFloatText(sledX, sledCY - 62, '+10', '#ffee00');
+    playJingle();
     return;
   }
 
@@ -1007,6 +1013,23 @@ function playTone(freq, vol, type) {
     g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
     osc.start(ctx.currentTime);
     osc.stop(ctx.currentTime + 0.22);
+  } catch(e) {}
+}
+
+function playJingle() {
+  try {
+    const ctx = scene.sound.context;
+    [523, 659, 784, 1047].forEach((freq, i) => {
+      const t = ctx.currentTime + i * 0.1;
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.connect(g); g.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      g.gain.setValueAtTime(0.1, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+      osc.start(t); osc.stop(t + 0.18);
+    });
   } catch(e) {}
 }
 
