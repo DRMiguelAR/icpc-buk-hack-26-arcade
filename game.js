@@ -187,7 +187,9 @@ function update(time, delta) {
   for (const p of projectiles) {
     if (!p.isWall) continue;
     if (p.y + p.h <= sledCY - 14 || p.y >= sledCY + 14) continue; // no vertical overlap
-    const over = (sledX + 24) - (p.x - 1);
+    if (p.x + p.w <= sledX - 24) continue;    // wall already fully passed sled (left)
+    if (p.x >= sledX + 24) continue;           // wall hasn't reached sled yet (right)
+    const over = (sledX + 24) - p.x;
     if (over > 0) { sledX -= over; mooseX -= over; wallPush = true; }
   }
   // Clamp sled and moose inside play zone
@@ -309,12 +311,12 @@ function spawnWall() {
   const occ = new Set([m.zone, f.zone]);
   const free = [0, 1, 2].filter(z => !occ.has(z));
   if (free.length === 0) return;
-  const wallY = ZY[free[0]];
-  const wallH = ZY[free[free.length - 1]] + ZH - wallY;
-  projectiles.push({
-    x: SEPARATOR - SH, y: wallY, w: SH, h: wallH,
-    speed: SEPARATOR / 7000, isObstacle: false, isWall: true, subtype: 0
-  });
+  for (const z of free) {
+    projectiles.push({
+      x: SEPARATOR - SH, y: ZY[z] + SH, w: SH, h: 2 * SH,
+      speed: SEPARATOR / 7000, isObstacle: false, isWall: true, subtype: 0
+    });
+  }
 }
 
 // ─── Player mechanics ────────────────────────────────────────────────────────
