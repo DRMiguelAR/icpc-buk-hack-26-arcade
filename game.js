@@ -55,7 +55,7 @@ const MOVE_CD = 160;
 const D_MIN = 45;          // collision radius (push boundary)
 const D_MAX = 2 * SH;      // max rope length = 2 lane slots ≈ 92 px
 let mooseX = 132, sledX = 50;
-let mooseLane = 5, mooseCY = 0, mooseMCool = 0, mooseHCool = 0;
+let mooseLane = 5, mooseCY = 0, mooseMCool = 0, mooseHCool = 0, mooseFlyTimer = 0;
 let sledCY = 0;
 let life = 3, score = 0;
 let celebTimer = 0, damageTimer = 0, dmgShake = 0;
@@ -84,7 +84,7 @@ function create() {
   m = { zone: 1, cy: zCY(1), targetCY: zCY(1), punch: 0, bounce: 0 };
   f = { zone: 1, cy: zCY(1), targetCY: zCY(1), punch: 0, bounce: 0 };
   projectiles = [];
-  mooseX = 132; sledX = 50; mooseLane = 5; mooseMCool = 0; mooseHCool = 0;
+  mooseX = 132; sledX = 50; mooseLane = 5; mooseMCool = 0; mooseHCool = 0; mooseFlyTimer = 0;
   mooseCY = laneCY(5); sledCY = mooseCY;
   life = 10; score = 0;
   celebTimer = 0; damageTimer = 0; dmgShake = 0;
@@ -125,15 +125,16 @@ function update(time, delta) {
   }
 
   rAccum += delta;
-  if (rAccum >= RSTEP) {
-    rAccum -= RSTEP;
+  const effectiveRSTEP = RSTEP / speedMult;
+  if (rAccum >= effectiveRSTEP) {
+    rAccum -= effectiveRSTEP;
     rStep = (rStep + 1) % 4;
     onStep();
   }
 
   // Speed difficulty: +10% every 15 s
   speedTimer += delta;
-  if (speedTimer >= 10000) { speedTimer -= 10000; speedMult *= 1.2; }
+  if (speedTimer >= 10000) { speedTimer -= 10000; speedMult *= 1.15; }
 
   // Move projectiles left; remove when fully off left edge
   projectiles = projectiles.filter(p => { p.x -= p.speed * speedMult * delta; return p.x + p.w > 0; });
@@ -199,6 +200,7 @@ function update(time, delta) {
   sledCY = Math.max(23, Math.min(535, sledCY));
   if (wallPush) {
     damageTimer = 200;
+    mooseFlyTimer = 80; // se refresca cada frame que hay contacto → vuela solo mientras toca
     if (heartCooldown <= 0) {
       heartCooldown = 550;
       life = Math.max(0, life - 1);
@@ -213,6 +215,7 @@ function update(time, delta) {
   damageTimer -= delta; if (damageTimer < 0) damageTimer = 0;
   celebTimer  -= delta; if (celebTimer  < 0) celebTimer  = 0;
   heartCooldown -= delta; if (heartCooldown < 0) heartCooldown = 0;
+  mooseFlyTimer -= delta; if (mooseFlyTimer < 0) mooseFlyTimer = 0;
   dmgShake = damageTimer > 0 ? (Math.random() - 0.5) * 8 : 0;
 
   // Update heart particles
@@ -236,7 +239,7 @@ function update(time, delta) {
   drawSled(sledX, sledCY, celebTimer > 0, dmgShake);
   // Draw breaking hearts on top of sled
   for (const hp of heartParticles) { drawBrokenHeart(hp.x, hp.y, hp.r, hp.alpha); }
-  drawMoose(mooseX, mooseCY);
+  drawMoose(mooseX, mooseCY, mooseFlyTimer > 0);
   drawSeparator();
   drawChar(m, 672, false);
   drawChar(f, 742, true);
@@ -342,8 +345,10 @@ function spawnWall() {
   const free = [0, 1, 2].filter(z => !occ.has(z));
   if (free.length === 0) return;
   for (const z of free) {
+    // gap=0 → hueco en slot 3 (abajo); gap=1 → hueco en slot 0 (arriba)
+    const gap = Math.random() < 0.5 ? 0 : 1;
     projectiles.push({
-      x: SEPARATOR - SH, y: ZY[z] + SH, w: SH, h: 2 * SH,
+      x: SEPARATOR - SH, y: ZY[z] + gap * SH, w: SH, h: 3 * SH,
       speed: SEPARATOR / 7000, isObstacle: false, isWall: true, subtype: 0
     });
   }
@@ -361,6 +366,7 @@ function checkCollisions(delta) {
     if (p.x + p.w < sx || p.x > sx + sw || p.y + p.h < sy || p.y > sy + sh) continue;
     if (p.isObstacle) {
       damageTimer = 200;
+      mooseFlyTimer = 80; // se refresca cada frame que hay contacto → vuela solo mientras toca
       if (heartCooldown <= 0) {
         heartCooldown = 550;
         life = Math.max(0, life - 4);
@@ -456,16 +462,24 @@ function drawBrokenHeart(x, y, r, alpha) {
   gfx.fillCircle(x - r * 0.9 - 2, y - r * 0.55, r * 0.22);
 }
 
-function drawMoose(mx, my) {
+function drawMoose(mx, my, flying) {
   // Shadow
   gfx.fillStyle(0x000000, 0.22);
   gfx.fillEllipse(mx, my + 24, 55, 10);
-  // Legs (4 legs)
+  // Legs
   gfx.fillStyle(0x3c1e00);
-  gfx.fillRect(mx - 20, my + 10, 6, 18);
-  gfx.fillRect(mx - 10, my + 10, 6, 18);
-  gfx.fillRect(mx + 5,  my + 10, 6, 18);
-  gfx.fillRect(mx + 15, my + 10, 6, 18);
+  if (flying) {
+    // Pose de vuelo: patas extendidas hacia los lados (reno volando)
+    gfx.fillRect(mx - 42, my,      15, 5); // pata trasera-izq horizontal
+    gfx.fillRect(mx - 28, my - 8,  15, 5); // pata trasera-der diagonal arriba
+    gfx.fillRect(mx + 13, my - 8,  15, 5); // pata delantera-izq diagonal arriba
+    gfx.fillRect(mx + 27, my,      15, 5); // pata delantera-der horizontal
+  } else {
+    gfx.fillRect(mx - 20, my + 10, 6, 18);
+    gfx.fillRect(mx - 10, my + 10, 6, 18);
+    gfx.fillRect(mx + 5,  my + 10, 6, 18);
+    gfx.fillRect(mx + 15, my + 10, 6, 18);
+  }
   // Tail (cream, left side)
   gfx.fillStyle(0xddc888);
   gfx.fillEllipse(mx - 25, my + 2, 10, 8);
